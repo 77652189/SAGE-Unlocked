@@ -16,7 +16,7 @@ using System.Threading;
 
 static class Program
 {
-    public const string Version = "1.9.5-cnvoice";   // keep in step with installer/setup.iss
+    public const string Version = "1.9.5-cnvoice2";   // keep in step with installer/setup.iss
     const uint ImageBase = 0x400000;
 
     // called from inside the game (dll/proxy.c)
@@ -356,6 +356,10 @@ static class Program
             // tick like stock at 30 fps (flag set by the scheduler's exit stub)
             // (ra3 pads before it, tw/kw put it right after the previous function, so: something calls it)
             List<uint> modeCheck = ratio.Where(s => img[(int)(s - 1 - ImageBase)] == 0xA1 && (img[(int)(s - 2 - ImageBase)] == 0xCC || IsCallTarget(img, s - 1))).ToList();
+            // batches needs the newtick stub: without it the check always says no (1.9.4 again: units that leave the fog stay
+            // hidden, #36 on an uprising 1.0 exe where the check wasn't found). then run one phase per call like skip=batches
+            if (On("batches") && !(On("schedinterp") && On("newtick") && modeCheck.Count == 1 && img[(int)(modeCheck[0] - 1 - ImageBase)] == 0xA1))
+                skip = skip == "" ? "batches" : skip + ",batches";
             Write(proc, (uint)mem + 0x90, BitConverter.GetBytes(Math.Max(fps, 90)));
             Write(proc, (uint)mem + 0x94, BitConverter.GetBytes(On("batches") ? 2 * logicFps : Math.Max(fps, 90)));
             if (On("batches") && On("schedinterp") && On("newtick") && modeCheck.Count == 1 && img[(int)(modeCheck[0] - 1 - ImageBase)] == 0xA1)
